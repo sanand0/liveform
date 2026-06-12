@@ -1,0 +1,273 @@
+title: "Let AI Take Your Exams — Live Experiments"
+description: |
+  New questions appear automatically as the session progresses.
+  Each answer is final once submitted. Answer honestly — wrong
+  predictions are the most useful data we'll collect today.
+
+questions:
+  # ── 0. Segmentation (for slicing all later answers) ──────────
+
+  - id: ai_usage
+    field: single_choice
+    question: "How often do you use AI (ChatGPT/Claude/Gemini etc.), e.g. for coursework?"
+    choices:
+      - Never
+      - A few times a month
+      - A few times a week
+      - Daily
+
+  - id: ai_tools
+    field: multi_choice
+    question: "What are all the AI tools you have you used in the last month?"
+    choices:
+      - ChatGPT
+      - Claude
+      - Gemini
+      - Perplexity
+      - GitHub Copilot
+      - Codex
+      - Claude Code
+      - Antigravity / Gemini CLI
+      - Other
+      - None
+
+  # --- 0. Initial check
+  - id: will_it_work
+    field: single_choice
+    question: "Will the question I pasted on the screen get a one-shot answer correct from ChatGPT?"
+    choices:
+      - "Yes"
+      - "No"
+
+  # ── 1. Bring your wrong question ─────────────────────────────
+
+  - id: wrong_question
+    field: text
+    question: "What's one question you got **wrong** in an exam recently?"
+    description: |
+      Paste or describe the question as fully as you remember it.
+      Include the course name. We may run it live on stage.
+    minlength: 20
+    maxlength: 2000
+
+  - id: wrong_answer
+    field: text
+    question: "What was **your** answer — and, if you know it, the correct one?"
+    description: |
+      "I don't remember" is a fine answer.
+    minlength: 2
+    maxlength: 1000
+
+  # ── 2. Prediction market ─────────────────────────────────────
+  # For each question below: 0% = AI will definitely get it WRONG,
+  # 100% = AI will definitely get it RIGHT, 50% = even odds.
+  # IMPORTANT: answer the "your answer" question BEFORE we run the AI.
+
+  - id: pm1_own
+    field: single_choice
+    question: "**Q1 — first, YOUR answer.** You pick Door 1 of 3. The host — who does NOT know where the car is — opens Door 3 at random, and it happens to show a goat. Should you switch?"
+    choices:
+      - "Switch — winning probability 2/3"
+      - "Doesn't matter — it's 1/2 either way"
+      - "Stay — Door 1 is now more likely"
+
+  - id: pm1_conf
+    field: single_choice
+    question: "**Q1 — prediction.** Will the AI (chat mode, no tools) get the door question right?"
+    description: |
+      0% = AI gets it wrong · 50% = even odds · 100% = AI gets it right
+    choices:
+      - "0%"
+      - "10%"
+      - "20%"
+      - "30%"
+      - "40%"
+      - "50%"
+      - "60%"
+      - "70%"
+      - "80%"
+      - "90%"
+      - "100%"
+
+  - id: pm2_own
+    field: text
+    question: "**Q2 — first, YOUR answer.** A disease affects 1 in 1,000 people. A test is 99% sensitive, 95% specific. You test positive. What's the probability you have the disease (roughly)?"
+    description: |
+      A rough percentage is fine, e.g. "90%" or "2%".
+    minlength: 1
+    maxlength: 100
+
+  - id: pm2_conf
+    field: single_choice
+    question: "**Q2 — prediction.** Will the AI (chat mode, no tools) get the disease-test question right?"
+    choices:
+      - "0%"
+      - "10%"
+      - "20%"
+      - "30%"
+      - "40%"
+      - "50%"
+      - "60%"
+      - "70%"
+      - "80%"
+      - "90%"
+      - "100%"
+
+  - id: pm3_chat_conf
+    field: single_choice
+    question: "**Q3 — prediction (CHAT mode).** How many times does 'ana' appear in 'bananananas' (overlapping allowed)? Will the AI get it right *without* tools?"
+    choices:
+      - "0%"
+      - "10%"
+      - "20%"
+      - "30%"
+      - "40%"
+      - "50%"
+      - "60%"
+      - "70%"
+      - "80%"
+      - "90%"
+      - "100%"
+
+  - id: pm3_agent_conf
+    field: single_choice
+    question: "**Q3 again — prediction (AGENT mode).** Same question, but now the AI is a coding agent that can write and run code. Will it get it right?"
+    choices:
+      - "0%"
+      - "10%"
+      - "20%"
+      - "30%"
+      - "40%"
+      - "50%"
+      - "60%"
+      - "70%"
+      - "80%"
+      - "90%"
+      - "100%"
+
+  - id: pm4_conf
+    field: single_choice
+    question: "**Q4 — prediction.** As per the IITM BS grading formula, what is the exact weightage of the TDS final exam F this term? Will the AI (chat mode, no web search) state it correctly?"
+    choices:
+      - "0%"
+      - "10%"
+      - "20%"
+      - "30%"
+      - "40%"
+      - "50%"
+      - "60%"
+      - "70%"
+      - "80%"
+      - "90%"
+      - "100%"
+
+  - id: pm5_conf
+    field: single_choice
+    question: "**Q5 — prediction.** What does this print? `def f(x, l=[]): l.append(x); return l` then `f(1); f(2); print(f(3))`. Will the AI (chat mode) get it right?"
+    choices:
+      - "0%"
+      - "10%"
+      - "20%"
+      - "30%"
+      - "40%"
+      - "50%"
+      - "60%"
+      - "70%"
+      - "80%"
+      - "90%"
+      - "100%"
+
+  - id: pm_total
+    field: single_choice
+    question: "**Overall bet:** Out of these 5 questions, how many will the AI get right?"
+    choices:
+      - "0"
+      - "1"
+      - "2"
+      - "3"
+      - "4"
+      - "5"
+
+  # # ── 4. Confession box ────────────────────────────────────────
+
+  - id: confession
+    field: text
+    question: "**Amnesty box.** What's the cleverest exam technique or hack you've seen or heard of (in any course, by anyone)?"
+    description: |
+      I design exams; you're better at breaking them than I am.
+      Responses will only ever be reported in aggregate, never with
+      identities. "Nothing to report" is a valid answer.
+    minlength: 2
+    maxlength: 2000
+
+  - id: confession_status
+    field: single_choice
+    question: "Does that technique still work?"
+    choices:
+      - "Yes, still works"
+      - "Patched / no longer works"
+      - "Don't know"
+      - "Not applicable"
+
+  - id: coding_agent_score
+    field: single_choice
+    question: "How much will Codex score in the TDS exam at https://exam.sanand.workers.dev/2026-06-test"
+    choices:
+      - "0%"
+      - "10%"
+      - "20%"
+      - "30%"
+      - "40%"
+      - "50%"
+      - "60%"
+      - "70%"
+      - "80%"
+      - "90%"
+      - "100%"
+
+  # # ── 3. AI-proof question contest (₹5K / ₹3K / ₹2K) ───────────
+
+  - id: ai_proof_q1
+    field: text
+    question: "**Contest entry 1:** Design a question that ChatGPT will NOT solve easily, but a human can."
+    description: |
+      It should test a real human ability in an area where AI does
+      poorly — good enough that I can include it in my next online
+      exam. Prizes for the top 3 entries: **₹5,000 / ₹3,000 / ₹2,000**.
+      Include the correct answer and one line on *why* AI will fail.
+    minlength: 30
+    maxlength: 3000
+
+  - id: ai_proof_q2
+    field: text
+    question: "**Contest entry 2:** One more AI-proof question (optional but doubles your chances)."
+    description: |
+      Same rules: question + correct answer + why AI fails on it.
+    minlength: 0
+    maxlength: 3000
+
+  # # ── 6. Closing (open in the last 10 minutes) ─────────────────
+
+  - id: surprise
+    field: text
+    question: "What **surprised** you most in today's session?"
+    minlength: 5
+    maxlength: 1000
+
+  - id: ritual
+    field: single_choice
+    question: "Which habit will you actually try this week?"
+    choices:
+      - "Bet on AI before trusting it (predict, then check)"
+      - "Verify AI answers instead of re-solving"
+      - "Use AI as a Socratic sparring partner, not an answer machine"
+      - "Design my own AI-proof practice questions"
+      - "None of these"
+
+  - id: panel_optin
+    field: single_choice
+    question: "**Join the experiment?** Once a month I'll send one quiz's worth of questions. You run them through your AI, report the score, and I publish the trendline: is IITM adapting faster than AI is improving?"
+    choices:
+      - "Yes — count me in"
+      - "Maybe — tell me more first"
+      - "No thanks"
