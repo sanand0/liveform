@@ -1,0 +1,13 @@
+.venv/
+.vite/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+dist/
+
+# Local credentials and response PII
+client_secret*.json
+credentials*.json
+responses.tsv
+.liveform-types.json

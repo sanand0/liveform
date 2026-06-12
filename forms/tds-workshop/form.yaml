@@ -1,0 +1,38 @@
+title: "AI Workshop Survey"
+description: |
+  New questions appear automatically. Each answer is final once submitted.
+
+auth:
+  allowed_domains:
+    - study.iitm.ac.in
+    - ds.study.iitm.ac.in
+
+questions:
+  - id: link
+    field: text
+    question: "Submit your **project link**"
+    description: |
+      Use a public `https://` URL.
+    type: url
+    minlength: 10
+    maxlength: 200
+    pattern: "https?://.+"
+
+  - id: useful
+    field: single_choice
+    question: "How useful was this?"
+    choices:
+      - Not useful
+      - Somewhat useful
+      - Very useful
+
+  - id: tools
+    field: multi_choice
+    question: "What tools did you use?"
+    choices:
+      - ChatGPT
+      - Claude
+      - Gemini
+      - Codex
+
+  # Add new questions here during the session.

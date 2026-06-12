@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "liveform"
+version = "0.1.0"
+description = "Live, locally hosted surveys for classrooms and workshops"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115",
+  "google-auth>=2.40",
+  "markdown-it-py>=3.0",
+  "nh3>=0.2",
+  "pyyaml>=6.0",
+  "requests>=2.32",
+  "segno>=1.6",
+  "typer>=0.15",
+  "uvicorn>=0.34",
+]
+
+[project.scripts]
+liveform = "liveform.cli:app"
+
+[dependency-groups]
+dev = [
+  "httpx2>=0.1",
+  "pytest>=8.3",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/liveform"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
