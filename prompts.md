@@ -25,6 +25,10 @@ The question should appear alongside the question number. Currently, it appears 
 
 The question number should be bigger - about the same size as the question.
 
+---
+
+https://forms.s-anand.net/ still shows {"detail":"Form not found"} while http://localhost:3676/ shows the latest form
+
 <!-- codex resume 019ec025-b930-7132-9661-482be4a45464 --yolo -->
 
 ## Initial draft, 12 Jun 2026

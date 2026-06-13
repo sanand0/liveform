@@ -105,6 +105,7 @@ def create_app(
         return response
 
     @app.get("/", response_class=HTMLResponse)
+    @app.get("/index.html", response_class=HTMLResponse)
     def home(request: Request) -> Response:
         slugs = registry.slugs()
         if not slugs:

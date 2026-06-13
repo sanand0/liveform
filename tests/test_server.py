@@ -58,6 +58,14 @@ def test_homepage_links_to_most_recently_modified_form(forms_dir: Path, verifier
     assert "workshop" not in page.text
 
 
+def test_homepage_is_available_at_index_html(client: TestClient) -> None:
+    root = client.get("/")
+    index = client.get("/index.html")
+
+    assert index.status_code == 200
+    assert index.text == root.text
+
+
 def test_form_page_uses_forwarded_origin_for_exam_url(client: TestClient) -> None:
     page = client.get(
         "/workshop/",
