@@ -1,5 +1,70 @@
 """Browser assets served below each form path."""
 
+HOME_PAGE = """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Latest form</title>
+  <style>{css}</style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">LATEST FORM</p>
+    <a class="latest-form" href="{form_url}">
+      <div class="title" role="heading" aria-level="1">{title_html}</div>
+      <div class="description">{description_html}</div>
+      <span class="open">Open form <span aria-hidden="true">→</span></span>
+    </a>
+  </main>
+</body>
+</html>
+"""
+
+HOME_CSS = """
+:root {
+  color-scheme: light dark;
+  --ink: #172033;
+  --muted: #647087;
+  --paper: #fffdf8;
+  --canvas: #edf2f2;
+  --line: #cad4d6;
+  --accent: #b9301e;
+  --shadow: #18212f22;
+  font-family: "Avenir Next", Avenir, "Trebuchet MS", sans-serif;
+}
+* { box-sizing: border-box; }
+body {
+  display: grid; min-height: 100dvh; margin: 0; place-items: center; color: var(--ink);
+  background:
+    radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--accent) 28%, transparent) 0, transparent 30rem),
+    radial-gradient(circle at 100% 80%, #18745140 0, transparent 28rem),
+    var(--canvas);
+}
+main { width: min(100% - 2rem, 700px); }
+.eyebrow { margin: 0 0 .65rem; color: var(--accent); font-size: .72rem; font-weight: 800; letter-spacing: .16em; }
+.latest-form {
+  display: block; padding: clamp(1.5rem, 6vw, 3rem); border: 1px solid var(--line); border-radius: 1.25rem;
+  background: var(--paper); color: inherit; text-decoration: none; box-shadow: 0 18px 48px var(--shadow);
+  transition: transform .2s, box-shadow .2s, border-color .2s;
+}
+.latest-form:hover, .latest-form:focus-visible {
+  transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 24px 56px var(--shadow);
+}
+.latest-form:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+.title { font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif; font-size: clamp(2rem, 7vw, 3.8rem); font-weight: 700; line-height: 1.05; }
+.title > :first-child { margin-top: 0; }
+.title > :last-child { margin-bottom: .75rem; }
+.description { color: var(--muted); font-size: 1.05rem; line-height: 1.6; }
+.description > :last-child { margin-bottom: 0; }
+.open { display: block; margin-top: 2rem; color: var(--accent); font-weight: 800; }
+@media (prefers-color-scheme: dark) {
+  :root { --ink: #edf4f2; --muted: #a9b9bd; --paper: #172025; --canvas: #0d1418; --line: #35464c; --accent: #ff755e; --shadow: #0008; }
+}
+@media (prefers-reduced-motion: reduce) { .latest-form { transition: none; } }
+"""
+
 PAGE = """<!doctype html>
 <html lang="en">
 <head>
@@ -15,9 +80,9 @@ PAGE = """<!doctype html>
 <body data-slug="{slug}" data-client-id="{client_id}">
   <header>
     <div>
-      <p class="eyebrow">LIVEFORM</p>
-      <div id="title" class="title" role="heading" aria-level="1">Loading form...</div>
-      <div id="description"></div>
+      <p class="eyebrow"><a href="{exam_url}">{exam_url}</a></p>
+      <div id="title" class="title" role="heading" aria-level="1">{title_html}</div>
+      <div id="description">{description_html}</div>
     </div>
     <aside>
       <button id="theme-toggle" class="theme-toggle" type="button">Dark mode</button>
@@ -91,6 +156,7 @@ aside { display: grid; justify-items: end; gap: .55rem; }
 .title > :last-child, .question-title > :last-child { margin-bottom: 0; }
 h2, p { margin-top: 0; }
 .eyebrow { margin-bottom: .45rem; color: var(--accent-deep); font-size: .72rem; font-weight: 800; letter-spacing: .16em; }
+.eyebrow a { color: inherit; overflow-wrap: anywhere; text-decoration-thickness: .08em; text-underline-offset: .2em; }
 figure { flex: 0 0 auto; margin: 0; padding: .5rem; border-radius: .85rem; background: #fff; text-align: center; box-shadow: 0 8px 24px var(--shadow); }
 figure img { display: block; }
 figcaption { padding-top: .25rem; color: #52606b; font-size: .72rem; }

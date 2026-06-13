@@ -1,5 +1,6 @@
 import csv
 import json
+import os
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -23,10 +24,47 @@ def test_form_page_and_every_local_asset_are_under_form_path(client: TestClient)
     assert "Math.random()" in client.get("/workshop/app.js").text
     assert 'size: "medium", width: 220' in client.get("/workshop/app.js").text
     assert "min-height: 100dvh" in client.get("/workshop/app.css").text
+    assert "<strong>Welcome.</strong>" in page.text
+    assert "Loading form..." not in page.text
+    assert 'href="http://testserver/workshop/"' in page.text
+    assert "http://testserver/workshop/" in page.text
     assert (
         "style-src 'self' 'unsafe-inline' https://accounts.google.com"
         in page.headers["content-security-policy"]
     )
+
+
+def test_homepage_links_to_most_recently_modified_form(forms_dir: Path, verifier) -> None:
+    from liveform.server import create_app
+
+    second = forms_dir / "latest"
+    second.mkdir()
+    (second / "form.yaml").write_text(
+        "title: Latest **exam**\ndescription: The newest form description.\nquestions: []\n"
+    )
+    os.utime(forms_dir / "workshop" / "form.yaml", (1_000_000_000, 1_000_000_000))
+    os.utime(second / "form.yaml", (2_000_000_000, 2_000_000_000))
+    client = TestClient(
+        create_app(forms_dir, "client-id", "https://forms.example", verifier=verifier)
+    )
+
+    page = client.get("/", headers={"Host": "forms.example", "X-Forwarded-Proto": "https"})
+
+    assert page.status_code == 200
+    assert 'href="https://forms.example/latest/"' in page.text
+    assert "Latest <strong>exam</strong>" in page.text
+    assert "The newest form description." in page.text
+    assert "workshop" not in page.text
+
+
+def test_form_page_uses_forwarded_origin_for_exam_url(client: TestClient) -> None:
+    page = client.get(
+        "/workshop/",
+        headers={"Host": "forms.example", "X-Forwarded-Proto": "https"},
+    )
+
+    assert 'href="https://forms.example/workshop/"' in page.text
+    assert "https://forms.example/workshop/" in page.text
 
 
 def test_qr_uses_the_origin_it_was_requested_from(client: TestClient) -> None:

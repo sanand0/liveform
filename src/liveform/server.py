@@ -15,7 +15,7 @@ from fastapi import FastAPI, Header, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from pydantic import BaseModel
 
-from liveform.assets import CSS, JS, PAGE
+from liveform.assets import CSS, HOME_CSS, HOME_PAGE, JS, PAGE
 from liveform.auth import GoogleTokenVerifier, is_authorized, normalize_identity
 from liveform.config import ConfigError, Form, FormRegistry, Question
 from liveform.store import ResponseStore
@@ -58,6 +58,11 @@ def create_app(
         except (ConfigError, OSError) as error:
             raise HTTPException(503, str(error)) from error
 
+    def request_origin(request: Request) -> str:
+        forwarded_scheme = request.headers.get("X-Forwarded-Proto", "").split(",", 1)[0].strip()
+        scheme = forwarded_scheme if forwarded_scheme in {"http", "https"} else request.url.scheme
+        return f"{scheme}://{request.url.netloc}"
+
     def authenticate(form: Form, authorization: str | None) -> dict[str, Any]:
         if not authorization or not authorization.startswith("Bearer "):
             raise HTTPException(401, "Google sign-in required")
@@ -99,14 +104,34 @@ def create_app(
         response.headers["X-Content-Type-Options"] = "nosniff"
         return response
 
+    @app.get("/", response_class=HTMLResponse)
+    def home(request: Request) -> Response:
+        slugs = registry.slugs()
+        if not slugs:
+            raise HTTPException(404, "No forms found")
+        slug = max(slugs, key=lambda item: ((root / item / "form.yaml").stat().st_mtime_ns, item))
+        form = get_form(slug)
+        form_url = f"{request_origin(request)}/{slug}/"
+        content = HOME_PAGE.format(
+            css=HOME_CSS,
+            form_url=html.escape(form_url, quote=True),
+            title_html=form.title_html,
+            description_html=form.description_html,
+        )
+        return HTMLResponse(content, headers={"Cache-Control": "no-cache"})
+
     @app.get("/{slug}", response_class=HTMLResponse)
     @app.get("/{slug}/", response_class=HTMLResponse)
     @app.get("/{slug}/index.html", response_class=HTMLResponse)
-    def page(slug: str) -> Response:
-        get_form(slug)
+    def page(slug: str, request: Request) -> Response:
+        form = get_form(slug)
+        exam_url = f"{request_origin(request)}/{slug}/"
         content = PAGE.format(
             slug=html.escape(slug, quote=True),
             client_id=html.escape(google_client_id, quote=True),
+            exam_url=html.escape(exam_url, quote=True),
+            title_html=form.title_html,
+            description_html=form.description_html,
         )
         return HTMLResponse(content, headers={"Cache-Control": "no-cache"})
 
@@ -127,9 +152,7 @@ def create_app(
     @app.get("/{slug}/qr.svg")
     def qr(slug: str, request: Request) -> Response:
         get_form(slug)
-        forwarded_scheme = request.headers.get("X-Forwarded-Proto", "").split(",", 1)[0].strip()
-        scheme = forwarded_scheme if forwarded_scheme in {"http", "https"} else request.url.scheme
-        target = f"{scheme}://{request.url.netloc}/{slug}/"
+        target = f"{request_origin(request)}/{slug}/"
         return Response(
             qr_svg(target),
             media_type="image/svg+xml",

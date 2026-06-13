@@ -46,6 +46,8 @@ Open <http://localhost:3676/tds-workshop/>. The page also shows a QR code, but p
 your computer through `localhost`; use the Cloudflare tunnel setup below when students need to
 connect from other devices. QR codes use the origin through which the form is opened: opening the
 same form through `https://forms.s-anand.net/...` produces a public tunnel URL in its QR code.
+Opening the server root, such as <http://localhost:3676/> or <https://forms.s-anand.net/>, shows
+and links to the form whose `form.yaml` was modified most recently.
 
 The sample form allows only `study.iitm.ac.in` domains. To test with another verified Google
 account, edit its `auth.allowed_domains` / `auth.allowed_emails`, or remove the `auth` section to

@@ -1,5 +1,19 @@
 # Prompts
 
+## Revisions, 13 Jun 2026
+
+<!--
+cd ~/code/liveform/
+dev.sh
+codex --yolo --model gpt-5.5 --config model_reasoning_effort=medium
+-->
+
+- The home page / should show an elegant link to latest form - mentioning title and description. I will share the link `https://forms.s-anand.net/` with everyone and they can just visit the page and fill in the latest form
+- Instead of the .eyebrow "Liveform" show the URL of the exam, e.g. `http://localhost:3676/$DIR/` or `https://forms.s-anand.net/$DIR/`
+- Instead of "Loading form..." when not logged in, show title and description.
+
+<!-- codex resume 019ec025-b930-7132-9661-482be4a45464 --yolo -->
+
 ## Initial draft, 12 Jun 2026
 
 <!--
