@@ -172,7 +172,8 @@ figcaption { padding-top: .25rem; color: #52606b; font-size: .72rem; }
 .question:nth-child(3) { animation-delay: 80ms; }
 .question:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
 .question.answered { border-left: .35rem solid var(--success); }
-.question-title { margin-bottom: .35rem; font-size: 1.22rem; }
+.question-title { display: flex; align-items: baseline; gap: .45rem; margin-bottom: .35rem; font-size: 1.22rem; }
+.question-number { flex: 0 0 auto; color: var(--accent-deep); font-size: inherit; font-weight: 800; }
 .description { color: var(--muted); font-size: .92rem; }
 .description > :last-child, #description > :last-child { margin-bottom: 0; }
 label.choice { display: flex; gap: .65rem; align-items: flex-start; padding: .55rem 0; }
@@ -345,7 +346,7 @@ const render = (scroll = false) => {
   document.querySelector("#title").innerHTML = state.title_html;
   document.querySelector("#description").innerHTML = state.description_html;
   questions.replaceChildren();
-  for (const question of state.questions) {
+  for (const [index, question] of state.questions.entries()) {
     const article = document.createElement("article");
     article.className = "question";
     article.id = `question-${question.id}`;
@@ -353,7 +354,11 @@ const render = (scroll = false) => {
     title.className = "question-title";
     title.role = "heading";
     title.ariaLevel = "2";
-    title.innerHTML = question.question_html;
+    const number = document.createElement("span");
+    number.className = "question-number";
+    number.textContent = `${index + 1}.`;
+    title.append(number);
+    title.insertAdjacentHTML("beforeend", question.question_html);
     article.append(title);
     if (question.description_html) {
       const description = document.createElement("div");

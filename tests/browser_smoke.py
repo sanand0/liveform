@@ -37,6 +37,7 @@ with sync_playwright() as playwright:
 
     assert page.get_by_text("AI Workshop Survey").is_visible()
     assert page.locator(".question").count() == 3
+    assert page.locator(".question-number").all_inner_texts() == ["1.", "2.", "3."]
     page.locator("#question-useful input[value='Very useful']").check()
     page.locator("#question-link input").fill("https://example.com/project")
     page.locator("#question-link button").click()

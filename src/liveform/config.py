@@ -196,7 +196,7 @@ class FormRegistry:
         if question_id in seen:
             skip(f"duplicate id {question_id!r}")
             return None
-        field_name = item.get("field")
+        field_name = item.get("field", "single_choice" if "choices" in item else "text")
         if field_name not in FIELDS:
             skip(f"unsupported field {field_name!r}")
             return None

@@ -22,6 +22,7 @@ def test_form_page_and_every_local_asset_are_under_form_path(client: TestClient)
     assert client.get("/app.js", follow_redirects=False).status_code == 404
     assert client.get("/static/app.js").status_code == 404
     assert "Math.random()" in client.get("/workshop/app.js").text
+    assert 'number.className = "question-number"' in client.get("/workshop/app.js").text
     assert 'size: "medium", width: 220' in client.get("/workshop/app.js").text
     assert "min-height: 100dvh" in client.get("/workshop/app.css").text
     assert "<strong>Welcome.</strong>" in page.text

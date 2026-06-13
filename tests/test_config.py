@@ -80,6 +80,27 @@ questions:
     assert form.question("hidden") is None
 
 
+def test_field_defaults_to_text_or_single_choice_when_omitted(tmp_path: Path) -> None:
+    write_form(
+        tmp_path / "one",
+        """\
+title: One
+questions:
+  - id: text
+    question: Your name
+  - id: choice
+    question: Pick one
+    choices: [First, Second]
+""",
+    )
+
+    form = FormRegistry(tmp_path).get("one")
+
+    assert form.question("text").field == "text"
+    assert form.question("choice").field == "single_choice"
+    assert form.question("choice").choices == ("First", "Second")
+
+
 def test_changed_field_is_skipped_and_original_types_persist(tmp_path: Path, caplog) -> None:
     path = tmp_path / "one"
     write_form(path, "title: One\nquestions:\n- {id: q1, field: text, question: First}\n")

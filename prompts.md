@@ -12,6 +12,19 @@ codex --yolo --model gpt-5.5 --config model_reasoning_effort=medium
 - Instead of the .eyebrow "Liveform" show the URL of the exam, e.g. `http://localhost:3676/$DIR/` or `https://forms.s-anand.net/$DIR/`
 - Instead of "Loading form..." when not logged in, show title and description.
 
+---
+
+- Add sequential question numbers in the form HTML - so I can tell them "Fill out question 3 now". It's OK if questions re-number when I change the YAML.
+- If `field` is unspecified, default to `text` unless `choices` is present, in which case default to `single_choice`.
+
+---
+
+The question should appear alongside the question number. Currently, it appears on the nex line.
+
+---
+
+The question number should be bigger - about the same size as the question.
+
 <!-- codex resume 019ec025-b930-7132-9661-482be4a45464 --yolo -->
 
 ## Initial draft, 12 Jun 2026

@@ -144,9 +144,10 @@ questions:
     choices: [ChatGPT, Gemini, Codex]
 ```
 
-Supported `field` values are `text`, `textarea`, `single_choice`, and `multi_choice`. Text fields
-also support safe HTML input types plus `minlength`, `maxlength`, and `pattern`. Validation runs in
-both the browser and server. Markdown is rendered and sanitized server-side.
+Supported `field` values are `text`, `textarea`, `single_choice`, and `multi_choice`. When omitted,
+`field` defaults to `single_choice` if `choices` is present and `text` otherwise. Text fields also
+support safe HTML input types plus `minlength`, `maxlength`, and `pattern`. Validation runs in both
+the browser and server. Markdown is rendered and sanitized server-side.
 
 Authorization allows any verified Google email when `auth` is omitted. When rules exist, an email
 is allowed if it matches either `allowed_emails` or `allowed_domains`.
