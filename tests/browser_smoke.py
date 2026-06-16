@@ -1,5 +1,6 @@
 """Real-browser interaction and screenshot smoke test."""
 
+import json
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
@@ -28,10 +29,15 @@ with sync_playwright() as playwright:
     anonymous.close()
 
     context = browser.new_context(viewport={"width": 390, "height": 844})
-    context.add_init_script(
-        "localStorage.setItem('liveform.google-token:browser-client', 'student-token')"
-    )
     page = context.new_page()
+    session = page.request.post(
+        "http://127.0.0.1:8765/tds-workshop/session", data={"credential": "student-token"}
+    )
+    assert session.ok
+    page.add_init_script(
+        "localStorage.setItem('liveform.google-token:browser-client', "
+        f"{json.dumps(session.json()['token'])})"
+    )
     page.goto("http://127.0.0.1:8765/tds-workshop/")
     page.wait_for_load_state("networkidle")
 

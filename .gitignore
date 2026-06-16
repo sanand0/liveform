@@ -11,3 +11,4 @@ client_secret*.json
 credentials*.json
 responses.tsv
 .liveform-types.json
+.liveform-session-secret

@@ -282,6 +282,18 @@ const api = async (path, options = {}) => {
   return data;
 };
 
+const createSession = async (credential) => {
+  const response = await fetch(`${base}/session`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ credential }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data?.detail ?? "Sign-in failed");
+  token = data.token;
+  localStorage.setItem(tokenKey, token);
+};
+
 const showLogin = () => {
   login.hidden = false;
   questions.replaceChildren();
@@ -289,11 +301,14 @@ const showLogin = () => {
   const render = () => {
     google.accounts.id.initialize({
       client_id: clientId,
-      callback: ({ credential }) => {
-        token = credential;
-        localStorage.setItem(tokenKey, token);
-        login.hidden = true;
-        loadState(true).catch(showError);
+      callback: async ({ credential }) => {
+        try {
+          await createSession(credential);
+          login.hidden = true;
+          loadState(true).catch(showError);
+        } catch (error) {
+          showError(error);
+        }
       },
     });
     google.accounts.id.renderButton(document.querySelector("#google-button"), {

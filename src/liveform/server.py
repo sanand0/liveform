@@ -6,6 +6,7 @@ import html
 import io
 import json
 import re
+import secrets
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -16,17 +17,22 @@ from fastapi.responses import HTMLResponse, PlainTextResponse
 from pydantic import BaseModel
 
 from liveform.assets import CSS, HOME_CSS, HOME_PAGE, JS, PAGE
-from liveform.auth import GoogleTokenVerifier, is_authorized, normalize_identity
+from liveform.auth import GoogleTokenVerifier, SessionTokenSigner, is_authorized, normalize_identity
 from liveform.config import ConfigError, Form, FormRegistry, Question
 from liveform.store import ResponseStore
 
 MAX_REQUEST_BYTES = 1_000_000
 MAX_TEXT_ANSWER_LENGTH = 100_000
+SESSION_SECRET_FILE = ".liveform-session-secret"
 
 
 class AnswerRequest(BaseModel):
     question: str
     answer: Any
+
+
+class SessionRequest(BaseModel):
+    credential: str
 
 
 def create_app(
@@ -42,6 +48,7 @@ def create_app(
     root = Path(forms_dir).resolve()
     registry = FormRegistry(root)
     token_verifier = verifier or GoogleTokenVerifier(google_client_id)
+    session_signer = SessionTokenSigner(session_secret(root))
     app = FastAPI(
         title="liveform",
         docs_url=None,
@@ -66,9 +73,18 @@ def create_app(
     def authenticate(form: Form, authorization: str | None) -> dict[str, Any]:
         if not authorization or not authorization.startswith("Bearer "):
             raise HTTPException(401, "Google sign-in required")
+        token = authorization.removeprefix("Bearer ")
+        try:
+            identity = session_signer.verify(token)
+        except Exception:
+            identity = None
+        if identity:
+            if not is_authorized(form, identity):
+                raise HTTPException(403, "This Google account is not allowed to respond")
+            return identity
         try:
             identity = normalize_identity(
-                token_verifier.verify(authorization.removeprefix("Bearer "))
+                token_verifier.verify(token)
             )
         except Exception as error:
             raise HTTPException(401, "Invalid or expired Google sign-in") from error
@@ -193,6 +209,23 @@ def create_app(
             headers={"Cache-Control": "no-store"},
         )
 
+    @app.post("/{slug}/session", status_code=201)
+    def session(slug: str, request: SessionRequest) -> Response:
+        form = get_form(slug)
+        try:
+            identity = normalize_identity(token_verifier.verify(request.credential))
+        except Exception as error:
+            raise HTTPException(401, "Invalid or expired Google sign-in") from error
+        if not is_authorized(form, identity):
+            raise HTTPException(403, "This Google account is not allowed to respond")
+        token, expires_at = session_signer.create(identity)
+        return Response(
+            json.dumps({"token": token, "expires_at": expires_at}, separators=(",", ":")),
+            status_code=201,
+            media_type="application/json",
+            headers={"Cache-Control": "no-store"},
+        )
+
     @app.post("/{slug}/answers", status_code=201)
     def submit(
         slug: str,
@@ -236,6 +269,24 @@ def create_app(
         )
 
     return app
+
+
+def session_secret(root: Path) -> bytes:
+    """Load or create the local key that keeps sessions valid across restarts."""
+    path = root / SESSION_SECRET_FILE
+    try:
+        value = path.read_text().strip()
+        if value:
+            return bytes.fromhex(value)
+    except (OSError, ValueError):
+        pass
+    secret = secrets.token_bytes(32)
+    try:
+        path.write_text(secret.hex())
+        path.chmod(0o600)
+    except OSError:
+        pass
+    return secret
 
 
 def validate_answer(question: Question, value: Any) -> str:

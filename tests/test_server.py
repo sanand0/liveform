@@ -1,6 +1,7 @@
 import csv
 import json
 import os
+import time
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -138,6 +139,42 @@ def test_rejects_unverified_and_unauthorized_accounts(client: TestClient) -> Non
     assert unverified.status_code == 403
     assert unauthorized.status_code == 403
     assert explicitly_allowed.status_code == 200
+
+
+def test_google_credential_exchanges_for_daylong_liveform_session(client: TestClient) -> None:
+    before = int(time.time())
+    session = client.post("/workshop/session", json={"credential": "student-token"})
+
+    assert session.status_code == 201
+    data = session.json()
+    assert data["expires_at"] >= before + 24 * 60 * 60 - 5
+    assert client.get(
+        "/workshop/state", headers={"Authorization": f"Bearer {data['token']}"}
+    ).status_code == 200
+
+
+def test_liveform_session_survives_server_restart(forms_dir: Path, verifier) -> None:
+    from liveform.server import create_app
+
+    first = TestClient(create_app(forms_dir, "client-id", "https://forms.example", verifier=verifier))
+    session = first.post("/workshop/session", json={"credential": "student-token"}).json()
+
+    restarted = TestClient(
+        create_app(forms_dir, "client-id", "https://forms.example", verifier=verifier)
+    )
+    state = restarted.get(
+        "/workshop/state", headers={"Authorization": f"Bearer {session['token']}"}
+    )
+
+    assert state.status_code == 200
+
+
+def test_session_exchange_rejects_unauthorized_accounts(client: TestClient) -> None:
+    unauthorized = client.post("/workshop/session", json={"credential": "other-token"})
+    invalid = client.post("/workshop/session", json={"credential": "missing-token"})
+
+    assert unauthorized.status_code == 403
+    assert invalid.status_code == 401
 
 
 def test_submit_validates_and_serializes_each_field(client: TestClient, auth: dict) -> None:

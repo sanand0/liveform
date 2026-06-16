@@ -180,8 +180,8 @@ atomic across concurrent requests and server processes. The unique key is the no
 Google email plus question ID. Submitted answers cannot be edited through the application.
 Requests above 1 MB and individual text answers above 100,000 characters are rejected.
 
-`responses.tsv`, local credential files, and `.liveform-types.json` are ignored by Git by default
-because they contain PII, credentials, or local state. Back them up separately.
+`responses.tsv`, local credential files, `.liveform-types.json`, and `.liveform-session-secret`
+are ignored by Git by default because they contain PII, credentials, or local state. Back them up separately.
 Treat response text as untrusted when importing it into spreadsheet software.
 
 ## Development
