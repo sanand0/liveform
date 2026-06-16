@@ -12,6 +12,10 @@ codex --yolo --model gpt-5.5 --config model_reasoning_effort=medium
 - The .question-title need not be bold.
 - The page title should reflect the form title. For example: "Liveform: $survey_title"
 
+---
+
+The "# people answered" should appear as a small number below the question number circle. Just the number - with the tooltip showing what it is. That will reduce the vertical space taken up by this block.
+
 <!-- codex resume 019ecf86-d376-7741-82c1-c1f91c6139fe --yolo -->
 
 ## Live data, 16 Jun 2026

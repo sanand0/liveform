@@ -39,17 +39,15 @@ with sync_playwright() as playwright:
     assert page.title() == "Liveform: AI Workshop Survey"
     assert page.locator(".question").count() == 3
     assert page.locator(".question-number").all_inner_texts() == ["1", "2", "3"]
-    assert page.locator(".question-count").all_inner_texts() == [
-        "0 people answered",
-        "0 people answered",
-        "0 people answered",
-    ]
+    assert page.locator(".question-count").all_inner_texts() == ["0", "0", "0"]
+    assert page.locator(".question-count").first.get_attribute("title") == "0 people answered"
     page.locator("#question-useful input[value='Very useful']").check()
     page.locator("#question-link input").fill("https://example.com/project")
     page.locator("#question-link button").click()
     page.locator("#question-link .submitted").wait_for()
     assert "https://example.com/project" in page.locator("#question-link .submitted").inner_text()
-    assert page.locator("#question-link .question-count").inner_text() == "1 person answered"
+    assert page.locator("#question-link .question-count").inner_text() == "1"
+    assert page.locator("#question-link .question-count").get_attribute("title") == "1 person answered"
     assert page.locator("#question-useful input[value='Very useful']").is_checked()
 
     page.locator("#theme-toggle").click()
