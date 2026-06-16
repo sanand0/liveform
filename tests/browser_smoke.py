@@ -36,8 +36,9 @@ with sync_playwright() as playwright:
     page.wait_for_load_state("networkidle")
 
     assert page.get_by_text("AI Workshop Survey").is_visible()
+    assert page.title() == "Liveform: AI Workshop Survey"
     assert page.locator(".question").count() == 3
-    assert page.locator(".question-number").all_inner_texts() == ["1.", "2.", "3."]
+    assert page.locator(".question-number").all_inner_texts() == ["1", "2", "3"]
     assert page.locator(".question-count").all_inner_texts() == [
         "0 people answered",
         "0 people answered",

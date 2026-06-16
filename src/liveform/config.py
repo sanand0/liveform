@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import html
 import json
 import logging
 import re
@@ -28,6 +29,12 @@ def render_markdown(value: Any) -> str:
     return nh3.clean(MARKDOWN.render(str(value or "")))
 
 
+def render_plain_text(value: Any) -> str:
+    """Render Markdown-ish labels as text for browser chrome and metadata."""
+    html_text = render_markdown(value)
+    return re.sub(r"\s+", " ", re.sub(r"<[^>]*>", " ", html.unescape(html_text))).strip()
+
+
 @dataclass(frozen=True)
 class Question:
     id: str
@@ -49,6 +56,7 @@ class Question:
 @dataclass(frozen=True)
 class Form:
     slug: str
+    title_text: str
     title_html: str
     description_html: str
     questions: tuple[Question, ...]
@@ -61,6 +69,7 @@ class Form:
 
     def public(self) -> dict[str, Any]:
         return {
+            "title_text": self.title_text,
             "title_html": self.title_html,
             "description_html": self.description_html,
             "questions": [question.public() for question in self.questions],
@@ -157,8 +166,10 @@ class FormRegistry:
         self._write_types(types_path, types)
 
         allowed_domains, allowed_emails = self._auth_rules(raw.get("auth"))
+        title = raw.get("title", slug)
         payload = {
-            "title_html": render_markdown(raw.get("title", slug)),
+            "title_text": render_plain_text(title),
+            "title_html": render_markdown(title),
             "description_html": render_markdown(raw.get("description", "")),
             "questions": [question.public() for question in questions],
         }
@@ -167,6 +178,7 @@ class FormRegistry:
         ).hexdigest()[:16]
         return Form(
             slug=slug,
+            title_text=payload["title_text"],
             title_html=payload["title_html"],
             description_html=payload["description_html"],
             questions=tuple(questions),

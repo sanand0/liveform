@@ -130,6 +130,7 @@ def create_app(
         content = PAGE.format(
             slug=html.escape(slug, quote=True),
             client_id=html.escape(google_client_id, quote=True),
+            title_text=html.escape(form.title_text, quote=False),
             exam_url=html.escape(exam_url, quote=True),
             title_html=form.title_html,
             description_html=form.description_html,

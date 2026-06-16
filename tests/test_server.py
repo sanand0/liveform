@@ -26,6 +26,7 @@ def test_form_page_and_every_local_asset_are_under_form_path(client: TestClient)
     assert 'count.className = "question-count"' in client.get("/workshop/app.js").text
     assert 'size: "medium", width: 220' in client.get("/workshop/app.js").text
     assert "min-height: 100dvh" in client.get("/workshop/app.css").text
+    assert "<title>Liveform: AI Workshop</title>" in page.text
     assert "<strong>Welcome.</strong>" in page.text
     assert "Loading form..." not in page.text
     assert 'href="http://testserver/workshop/"' in page.text

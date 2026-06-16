@@ -71,7 +71,7 @@ PAGE = """<!doctype html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>Liveform</title>
+  <title>Liveform: {title_text}</title>
   <link rel="icon" href="/{slug}/qr.svg?v=2" type="image/svg+xml">
   <link rel="stylesheet" href="/{slug}/app.css">
   <script src="https://accounts.google.com/gsi/client" async></script>
@@ -150,7 +150,8 @@ header {
   padding-block: 2.5rem 1.25rem;
 }
 aside { display: grid; justify-items: end; gap: .55rem; }
-.title, .question-title { font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif; font-weight: 700; }
+.title, .question-title { font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif; }
+.title { font-weight: 700; }
 .title { margin-bottom: .5rem; font-size: clamp(1.9rem, 5vw, 3rem); line-height: 1.08; }
 .title > :first-child, .question-title > :first-child { margin-top: 0; }
 .title > :last-child, .question-title > :last-child { margin-bottom: 0; }
@@ -171,9 +172,16 @@ figcaption { padding-top: .25rem; color: #52606b; font-size: .72rem; }
 .question:nth-child(2) { animation-delay: 40ms; }
 .question:nth-child(3) { animation-delay: 80ms; }
 .question:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+.question { position: relative; padding-inline-start: clamp(4rem, 9vw, 4.8rem); }
 .question.answered { border-left: .35rem solid var(--success); }
 .question-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: .45rem; margin-bottom: .35rem; font-size: 1.22rem; }
-.question-number { flex: 0 0 auto; color: var(--accent-deep); font-size: inherit; font-weight: 800; }
+.question-number {
+  position: absolute; inset-block-start: clamp(1rem, 4vw, 1.45rem); inset-inline-start: clamp(1rem, 4vw, 1.35rem);
+  display: grid; width: 2.25rem; aspect-ratio: 1; place-items: center; border: 1px solid color-mix(in srgb, var(--accent) 70%, #fff);
+  border-radius: 50%; background: linear-gradient(145deg, var(--accent), var(--accent-deep)); color: #fff;
+  font-family: "Avenir Next", Avenir, "Trebuchet MS", sans-serif; font-size: .92rem; font-weight: 800; line-height: 1;
+  box-shadow: 0 .45rem 1rem color-mix(in srgb, var(--accent) 28%, transparent);
+}
 .question-count {
   margin-inline-start: auto; padding: .18rem .45rem; border: 1px solid var(--line); border-radius: 999px;
   color: var(--muted); font-family: "Avenir Next", Avenir, "Trebuchet MS", sans-serif;
@@ -358,6 +366,7 @@ const restoreDraft = (question, form) => {
 };
 
 const render = (scroll = false) => {
+  document.title = `Liveform: ${state.title_text}`;
   document.querySelector("#title").innerHTML = state.title_html;
   document.querySelector("#description").innerHTML = state.description_html;
   questions.replaceChildren();
@@ -371,8 +380,8 @@ const render = (scroll = false) => {
     title.ariaLevel = "2";
     const number = document.createElement("span");
     number.className = "question-number";
-    number.textContent = `${index + 1}.`;
-    title.append(number);
+    number.textContent = `${index + 1}`;
+    article.append(number);
     title.insertAdjacentHTML("beforeend", question.question_html);
     const count = document.createElement("span");
     count.className = "question-count";

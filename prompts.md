@@ -1,5 +1,19 @@
 # Prompts
 
+## Improve UI, 16 Jun 2026
+
+<!--
+cd ~/code/liveform/
+dev.sh
+codex --yolo --model gpt-5.5 --config model_reasoning_effort=medium
+-->
+
+- The numbers against the questions don't look nice. They're appearing on a line, standalone. Instead, render them in a circle at the top left of the card. Make sure it looks really good.
+- The .question-title need not be bold.
+- The page title should reflect the form title. For example: "Liveform: $survey_title"
+
+<!-- codex resume 019ecf86-d376-7741-82c1-c1f91c6139fe --yolo -->
+
 ## Live data, 16 Jun 2026
 
 <!--
