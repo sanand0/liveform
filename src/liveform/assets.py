@@ -233,7 +233,12 @@ const themeToggle = document.querySelector("#theme-toggle");
 let token = localStorage.getItem(tokenKey);
 let state;
 let etag;
+let lastStateCheck = 0;
 const drafts = new Map();
+const focusStaleMs = 3000;
+
+const canCheckState = () => token && !document.hidden && document.hasFocus();
+const shouldCheckOnFocus = () => canCheckState() && Date.now() - lastStateCheck > focusStaleMs;
 
 const draftKey = () => `liveform.drafts:${clientId}:${slug}:${state?.identity?.email ?? ""}`;
 const saveDrafts = () => sessionStorage.setItem(draftKey(), JSON.stringify(Object.fromEntries(drafts)));
@@ -473,6 +478,8 @@ const submit = async (event, question, button, error) => {
 };
 
 const loadState = async (scroll = false) => {
+  if (!canCheckState()) return;
+  lastStateCheck = Date.now();
   state = await api("/state");
   loadDrafts();
   etag = `"${state.version}"`;
@@ -481,7 +488,8 @@ const loadState = async (scroll = false) => {
 };
 
 const poll = async () => {
-  if (!token || document.hidden) return;
+  if (!canCheckState()) return;
+  lastStateCheck = Date.now();
   try {
     const nextState = await api("/state");
     const needsRender = !state || nextState.version !== state.version || JSON.stringify(nextState.answers) !== JSON.stringify(state.answers);
@@ -501,7 +509,11 @@ const poll = async () => {
   }
 };
 
-document.addEventListener("visibilitychange", () => !document.hidden && poll());
+const pollIfStale = () => {
+  if (shouldCheckOnFocus()) poll();
+};
+document.addEventListener("visibilitychange", pollIfStale);
+window.addEventListener("focus", pollIfStale);
 const schedulePoll = () => setTimeout(async () => {
   await poll();
   schedulePoll();

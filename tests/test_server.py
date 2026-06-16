@@ -38,6 +38,16 @@ def test_form_page_and_every_local_asset_are_under_form_path(client: TestClient)
     )
 
 
+def test_browser_state_checks_pause_without_focus(client: TestClient) -> None:
+    script = client.get("/workshop/app.js").text
+
+    assert "const focusStaleMs = 3000;" in script
+    assert "const canCheckState = () => token && !document.hidden && document.hasFocus();" in script
+    assert "if (!canCheckState()) return;" in script
+    assert 'window.addEventListener("focus", pollIfStale);' in script
+    assert 'document.addEventListener("visibilitychange", pollIfStale);' in script
+
+
 def test_homepage_links_to_most_recently_modified_form(forms_dir: Path, verifier) -> None:
     from liveform.server import create_app
 
@@ -148,15 +158,20 @@ def test_google_credential_exchanges_for_daylong_liveform_session(client: TestCl
     assert session.status_code == 201
     data = session.json()
     assert data["expires_at"] >= before + 24 * 60 * 60 - 5
-    assert client.get(
-        "/workshop/state", headers={"Authorization": f"Bearer {data['token']}"}
-    ).status_code == 200
+    assert (
+        client.get(
+            "/workshop/state", headers={"Authorization": f"Bearer {data['token']}"}
+        ).status_code
+        == 200
+    )
 
 
 def test_liveform_session_survives_server_restart(forms_dir: Path, verifier) -> None:
     from liveform.server import create_app
 
-    first = TestClient(create_app(forms_dir, "client-id", "https://forms.example", verifier=verifier))
+    first = TestClient(
+        create_app(forms_dir, "client-id", "https://forms.example", verifier=verifier)
+    )
     session = first.post("/workshop/session", json={"credential": "student-token"}).json()
 
     restarted = TestClient(

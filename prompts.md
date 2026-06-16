@@ -1,5 +1,17 @@
 # Prompts
 
+## Efficiency, 16 Jun 2026
+
+<!--
+cd ~/code/liveform/
+dev.sh
+codex --yolo --model gpt-5.5 --config model_reasoning_effort=medium
+-->
+
+Make sure the front-end does not ping the back-end when it is not in focus, e.g. if another tab is in focus or the browser is minimized. This will reduce the number of requests to the server and improve efficiency. But when it comes back into focus (and it hasn't checked in the last few seconds) it should immediately check for new questions and update the display.
+
+<!-- codex resume 019ecfd8-e794-7f53-874f-4034b0e87e58 --yolo -->
+
 ## Improve UI, 16 Jun 2026
 
 <!--
