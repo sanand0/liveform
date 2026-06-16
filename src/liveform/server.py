@@ -176,10 +176,15 @@ def create_app(
     def state(slug: str, authorization: str | None = Header(None)) -> Response:
         form = get_form(slug)
         identity = authenticate(form, authorization)
+        response_store = store(slug)
+        counts = response_store.answer_counts()
         payload = {
             **form.public(),
             "identity": {"email": identity["email"], "name": identity["name"]},
-            "answers": store(slug).answers_for(identity["email"]),
+            "answers": response_store.answers_for(identity["email"]),
+            "answer_counts": {
+                question.id: counts.get(question.id, 0) for question in form.questions
+            },
         }
         return Response(
             json.dumps(payload, separators=(",", ":")),
@@ -203,7 +208,8 @@ def create_app(
         ip = request.headers.get("CF-Connecting-IP") or (
             request.client.host if request.client else ""
         )
-        created = store(slug).submit(
+        response_store = store(slug)
+        created = response_store.submit(
             identity,
             question.id,
             answer,
@@ -212,8 +218,17 @@ def create_app(
         )
         if not created:
             raise HTTPException(409, "This question has already been submitted")
+        counts = response_store.answer_counts()
         return Response(
-            json.dumps({"answer": answer}, separators=(",", ":")),
+            json.dumps(
+                {
+                    "answer": answer,
+                    "answer_counts": {
+                        question.id: counts.get(question.id, 0) for question in form.questions
+                    },
+                },
+                separators=(",", ":"),
+            ),
             status_code=201,
             media_type="application/json",
             headers={"Cache-Control": "no-store"},

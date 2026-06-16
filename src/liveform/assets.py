@@ -172,8 +172,13 @@ figcaption { padding-top: .25rem; color: #52606b; font-size: .72rem; }
 .question:nth-child(3) { animation-delay: 80ms; }
 .question:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
 .question.answered { border-left: .35rem solid var(--success); }
-.question-title { display: flex; align-items: baseline; gap: .45rem; margin-bottom: .35rem; font-size: 1.22rem; }
+.question-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: .45rem; margin-bottom: .35rem; font-size: 1.22rem; }
 .question-number { flex: 0 0 auto; color: var(--accent-deep); font-size: inherit; font-weight: 800; }
+.question-count {
+  margin-inline-start: auto; padding: .18rem .45rem; border: 1px solid var(--line); border-radius: 999px;
+  color: var(--muted); font-family: "Avenir Next", Avenir, "Trebuchet MS", sans-serif;
+  font-size: .72rem; font-weight: 800; line-height: 1.4; white-space: nowrap;
+}
 .description { color: var(--muted); font-size: .92rem; }
 .description > :last-child, #description > :last-child { margin-bottom: 0; }
 label.choice { display: flex; gap: .65rem; align-items: flex-start; padding: .55rem 0; }
@@ -327,6 +332,16 @@ const displayAnswer = (answer) => {
   }
 };
 
+const countText = (count) => `${count} ${count === 1 ? "person" : "people"} answered`;
+
+const updateCounts = () => {
+  for (const question of state.questions) {
+    const count = state.answer_counts?.[question.id] ?? 0;
+    const element = document.querySelector(`#question-${question.id} .question-count`);
+    if (element) element.textContent = countText(count);
+  }
+};
+
 const rememberDraft = (question, form) => {
   const data = new FormData(form);
   drafts.set(question.id, question.field === "multi_choice" ? data.getAll("answer") : data.get("answer"));
@@ -359,6 +374,10 @@ const render = (scroll = false) => {
     number.textContent = `${index + 1}.`;
     title.append(number);
     title.insertAdjacentHTML("beforeend", question.question_html);
+    const count = document.createElement("span");
+    count.className = "question-count";
+    count.textContent = countText(state.answer_counts?.[question.id] ?? 0);
+    title.append(count);
     article.append(title);
     if (question.description_html) {
       const description = document.createElement("div");
@@ -407,6 +426,7 @@ const submit = async (event, question, button, error) => {
     drafts.delete(question.id);
     saveDrafts();
     state.answers[question.id] = result.answer;
+    state.answer_counts = result.answer_counts;
     render(false);
   } catch (cause) {
     if (cause.status === 409) {
@@ -429,12 +449,20 @@ const loadState = async (scroll = false) => {
 const poll = async () => {
   if (!token || document.hidden) return;
   try {
-    const response = await fetch(`${base}/version`, { headers: etag ? { "If-None-Match": etag } : {} });
-    if (response.status === 200) {
-      etag = response.headers.get("etag");
-      if (state && etag !== `"${state.version}"`) await loadState(true);
+    const nextState = await api("/state");
+    const needsRender = !state || nextState.version !== state.version || JSON.stringify(nextState.answers) !== JSON.stringify(state.answers);
+    const scroll = Boolean(state && nextState.version !== state.version);
+    state = nextState;
+    etag = `"${state.version}"`;
+    if (needsRender) {
+      loadDrafts();
+      render(scroll);
+      return;
     }
+    updateCounts();
+    setStatus(`${state.identity.name || state.identity.email} · ${Object.keys(state.answers).length} submitted`);
   } catch (error) {
+    if (!token) return;
     setStatus("Offline. Retrying automatically.", true);
   }
 };

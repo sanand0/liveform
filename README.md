@@ -164,6 +164,8 @@ is allowed if it matches either `allowed_emails` or `allowed_domains`.
 Automatic question updates do not reload the page. Unsubmitted input is preserved while questions
 re-render and in per-tab `sessionStorage`, so it also survives an accidental browser reload.
 Drafts are scoped to the form and signed-in email and removed after successful submission.
+Each question shows how many verified users have submitted an answer so far, refreshed on the same
+poll interval as form updates.
 
 ## Responses
 
@@ -190,7 +192,7 @@ uvx ruff check .
 uvx ruff format --check .
 ```
 
-The small unauthenticated `/<form>/version` endpoint supports ETag/304 responses. Clients poll on a
-jittered 5-10 second interval and fetch authenticated form state only after the validated public
-configuration version changes. Parsed response indexes and QR SVGs are cached in memory and
-invalidated when their backing data changes.
+Clients poll authenticated form state on a jittered 5-10 second interval to refresh question counts
+and pick up validated public configuration changes. The small unauthenticated `/<form>/version`
+endpoint remains available for lightweight version checks. Parsed response indexes and QR SVGs are
+cached in memory and invalidated when their backing data changes.

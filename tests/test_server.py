@@ -23,6 +23,7 @@ def test_form_page_and_every_local_asset_are_under_form_path(client: TestClient)
     assert client.get("/static/app.js").status_code == 404
     assert "Math.random()" in client.get("/workshop/app.js").text
     assert 'number.className = "question-number"' in client.get("/workshop/app.js").text
+    assert 'count.className = "question-count"' in client.get("/workshop/app.js").text
     assert 'size: "medium", width: 220' in client.get("/workshop/app.js").text
     assert "min-height: 100dvh" in client.get("/workshop/app.css").text
     assert "<strong>Welcome.</strong>" in page.text
@@ -114,6 +115,7 @@ def test_state_requires_auth_and_returns_public_config(client: TestClient, auth:
     data = response.json()
     assert data["identity"]["email"] == "student@example.edu"
     assert data["answers"] == {}
+    assert data["answer_counts"] == {"link": 0, "useful": 0, "tools": 0, "notes": 0}
     assert [question["id"] for question in data["questions"]] == [
         "link",
         "useful",
@@ -181,6 +183,26 @@ def test_submit_validates_and_serializes_each_field(client: TestClient, auth: di
 
     state = client.get("/workshop/state", headers=auth).json()
     assert state["answers"]["tools"] == '["Codex","ChatGPT"]'
+    assert state["answer_counts"] == {"link": 1, "useful": 1, "tools": 1, "notes": 1}
+
+
+def test_submission_counts_are_shared_across_respondents(client: TestClient, auth: dict) -> None:
+    guest_auth = {"Authorization": "Bearer guest-token"}
+
+    first = client.post(
+        "/workshop/answers", headers=auth, json={"question": "notes", "answer": "First"}
+    )
+    assert first.status_code == 201
+    assert first.json()["answer_counts"]["notes"] == 1
+
+    second = client.post(
+        "/workshop/answers", headers=guest_auth, json={"question": "notes", "answer": "Second"}
+    )
+    assert second.status_code == 201
+    assert second.json()["answer_counts"]["notes"] == 2
+
+    state = client.get("/workshop/state", headers=auth).json()
+    assert state["answer_counts"]["notes"] == 2
 
 
 def test_duplicate_answer_is_conflict_and_original_remains(client: TestClient, auth: dict) -> None:

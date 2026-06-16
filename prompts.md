@@ -1,5 +1,19 @@
 # Prompts
 
+## Live data, 16 Jun 2026
+
+<!--
+cd ~/code/liveform/
+dev.sh
+codex --yolo --model gpt-5.5 --config model_reasoning_effort=medium
+-->
+
+Modify the forms so that users will be able to see how many people have submitted answers to each question so far.
+
+Do this efficiently - e.g. you may want to maintain this on the server when someone submits an answer and update it when the client polls for new questions, instead of counting the TSV file every time.
+
+Write tests first, then implement. Run and test.
+
 ## Revisions, 13 Jun 2026
 
 <!--
