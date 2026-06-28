@@ -18,9 +18,15 @@ from markdown_it import MarkdownIt
 
 logger = logging.getLogger("liveform.config")
 
-FIELDS = {"text", "textarea", "single_choice", "multi_choice"}
+FIELDS = {"text", "textarea", "single_choice", "multi_choice", "file"}
 INPUT_TYPES = {"date", "datetime-local", "email", "number", "tel", "text", "time", "url"}
 ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$")
+ACCEPT_PATTERN = re.compile(
+    r"^(\.[A-Za-z0-9][A-Za-z0-9._-]*|[A-Za-z0-9!#$&^_.+-]+/([A-Za-z0-9!#$&^_.+-]+|\*))$"
+)
+SIZE_PATTERN = re.compile(r"^([1-9][0-9]*)(B|KB|MB)$", re.I)
+DEFAULT_FILE_MAX_SIZE = 1024 * 1024
+MAX_FILE_SIZE = 5 * 1024 * 1024
 MARKDOWN = MarkdownIt("commonmark", {"html": False, "linkify": True})
 
 
@@ -46,10 +52,13 @@ class Question:
     minlength: int | None = None
     maxlength: int | None = None
     pattern: str | None = None
+    accept: tuple[str, ...] = ()
+    max_size: int | None = None
 
     def public(self) -> dict[str, Any]:
         data = asdict(self)
         data["choices"] = list(self.choices)
+        data["accept"] = list(self.accept)
         return {key: value for key, value in data.items() if value not in (None, "", [], ())}
 
 
@@ -233,6 +242,21 @@ class FormRegistry:
                 return None
             choices = tuple(raw_choices)
 
+        accept: tuple[str, ...] = ()
+        max_size: int | None = None
+        if field_name == "file":
+            accept = self._parse_accept(item.get("accept"))
+            if item.get("accept") is not None and accept is None:
+                skip("accept must use HTML file accept syntax")
+                return None
+            max_size = self._parse_size(item.get("max_size", "1MB"))
+            if max_size is None:
+                skip("max_size must be a size like 500KB, 1MB, or 5MB")
+                return None
+            if max_size > MAX_FILE_SIZE:
+                skip("max_size cannot exceed 5MB")
+                return None
+
         input_type = item.get("type", "text")
         if field_name == "text" and input_type not in INPUT_TYPES:
             skip(f"unsupported input type {input_type!r}")
@@ -270,6 +294,8 @@ class FormRegistry:
             minlength=minlength,
             maxlength=maxlength,
             pattern=pattern,
+            accept=accept,
+            max_size=max_size,
         )
 
     @staticmethod
@@ -277,6 +303,33 @@ class FormRegistry:
         return (
             value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
         )
+
+    @staticmethod
+    def _parse_accept(value: Any) -> tuple[str, ...] | None:
+        if value is None:
+            return ()
+        items = [value] if isinstance(value, str) else value
+        if (
+            not isinstance(items, list)
+            or not items
+            or any(not isinstance(item, str) or not item.strip() for item in items)
+        ):
+            return None
+        normalized = tuple(item.strip().lower() for item in items)
+        if len(set(normalized)) != len(normalized):
+            return None
+        return normalized if all(ACCEPT_PATTERN.fullmatch(item) for item in normalized) else None
+
+    @staticmethod
+    def _parse_size(value: Any) -> int | None:
+        if not isinstance(value, str):
+            return None
+        match = SIZE_PATTERN.fullmatch(value.strip())
+        if not match:
+            return None
+        amount = int(match.group(1))
+        unit = match.group(2).upper()
+        return amount * {"B": 1, "KB": 1024, "MB": 1024 * 1024}[unit]
 
     @staticmethod
     def _auth_rules(auth: Any) -> tuple[set[str], set[str]]:

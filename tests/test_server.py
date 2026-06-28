@@ -1,6 +1,7 @@
 import csv
 import json
 import os
+import re
 import time
 from pathlib import Path
 
@@ -46,6 +47,16 @@ def test_browser_state_checks_pause_without_focus(client: TestClient) -> None:
     assert "if (!canCheckState()) return;" in script
     assert 'window.addEventListener("focus", pollIfStale);' in script
     assert 'document.addEventListener("visibilitychange", pollIfStale);' in script
+
+
+def test_browser_renders_file_inputs_and_submits_multipart(client: TestClient) -> None:
+    script = client.get("/workshop/app.js").text
+
+    assert 'element.type = "file";' in script
+    assert 'element.accept = question.accept.join(",");' in script
+    assert 'question.field === "file"' in script
+    assert 'data.get("answer")?.size > question.max_size' in script
+    assert 'body: fileData, headers: { Authorization: `Bearer ${token}` }' in script
 
 
 def test_homepage_links_to_most_recently_modified_form(forms_dir: Path, verifier) -> None:
@@ -300,10 +311,12 @@ def test_unknown_form_is_404(client: TestClient) -> None:
 
 
 def test_rejects_oversized_request_before_processing(client: TestClient, auth: dict) -> None:
+    from liveform.server import MAX_REQUEST_BYTES
+
     response = client.post(
         "/workshop/answers",
         headers=auth,
-        content=b"x" * 1_000_001,
+        content=b"x" * (MAX_REQUEST_BYTES + 1),
     )
 
     assert response.status_code == 413
@@ -348,3 +361,128 @@ def test_multiple_forms_have_independent_routes_and_response_files(
     )
     assert (second / "responses.tsv").exists()
     assert not (forms_dir / "workshop" / "responses.tsv").exists()
+
+
+def test_file_upload_succeeds_and_stores_sanitized_relative_path(
+    client: TestClient, auth: dict, forms_dir: Path
+) -> None:
+    form_file = forms_dir / "workshop" / "form.yaml"
+    form_file.write_text(
+        """\
+title: Uploads
+auth:
+  allowed_domains: [example.edu]
+questions:
+  - id: q
+    field: file
+    question: Upload CSV
+    accept: [.csv, text/csv]
+    max_size: 1KB
+"""
+    )
+
+    response = client.post(
+        "/workshop/answers",
+        headers=auth,
+        data={"question": "q"},
+        files={"answer": ("../../unsafe name.html", b"a,b\n1,2\n", "text/csv")},
+    )
+
+    assert response.status_code == 201
+    answer = response.json()["answer"]
+    assert re.fullmatch(r"uploads/q--student-example-edu--[0-9a-f]{12}\.csv", answer)
+    saved = forms_dir / "workshop" / answer
+    assert saved.read_bytes() == b"a,b\n1,2\n"
+    assert "/" not in saved.name.removeprefix("q--")
+    with (forms_dir / "workshop" / "responses.tsv").open(newline="") as file:
+        row = next(csv.DictReader(file, delimiter="\t"))
+    assert row["answer"] == answer
+    assert client.get(f"/workshop/{answer}").status_code == 404
+
+
+def test_file_upload_rejects_unaccepted_type(client: TestClient, auth: dict, forms_dir: Path) -> None:
+    form_file = forms_dir / "workshop" / "form.yaml"
+    form_file.write_text(
+        """\
+title: Uploads
+auth:
+  allowed_domains: [example.edu]
+questions:
+  - id: q
+    field: file
+    question: Upload image
+    accept: [image/*]
+"""
+    )
+
+    response = client.post(
+        "/workshop/answers",
+        headers=auth,
+        data={"question": "q"},
+        files={"answer": ("notes.txt", b"plain", "text/plain")},
+    )
+
+    assert response.status_code == 422
+    assert not (forms_dir / "workshop" / "uploads").exists()
+
+
+def test_file_upload_rejects_oversized_file(client: TestClient, auth: dict, forms_dir: Path) -> None:
+    form_file = forms_dir / "workshop" / "form.yaml"
+    form_file.write_text(
+        """\
+title: Uploads
+auth:
+  allowed_domains: [example.edu]
+questions:
+  - id: q
+    field: file
+    question: Upload tiny file
+    max_size: 5B
+"""
+    )
+
+    response = client.post(
+        "/workshop/answers",
+        headers=auth,
+        data={"question": "q"},
+        files={"answer": ("tiny.txt", b"123456", "text/plain")},
+    )
+
+    assert response.status_code == 413
+    assert not (forms_dir / "workshop" / "uploads").exists()
+
+
+def test_file_upload_duplicate_is_conflict_and_keeps_first_file(
+    client: TestClient, auth: dict, forms_dir: Path
+) -> None:
+    form_file = forms_dir / "workshop" / "form.yaml"
+    form_file.write_text(
+        """\
+title: Uploads
+auth:
+  allowed_domains: [example.edu]
+questions:
+  - id: q
+    field: file
+    question: Upload file
+"""
+    )
+    endpoint = "/workshop/answers"
+    first = client.post(
+        endpoint,
+        headers=auth,
+        data={"question": "q"},
+        files={"answer": ("first.txt", b"first", "text/plain")},
+    )
+    second = client.post(
+        endpoint,
+        headers=auth,
+        data={"question": "q"},
+        files={"answer": ("second.txt", b"second", "text/plain")},
+    )
+
+    assert first.status_code == 201
+    assert second.status_code == 409
+    assert sorted(path.read_bytes() for path in (forms_dir / "workshop" / "uploads").iterdir()) == [
+        b"first"
+    ]

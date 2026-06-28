@@ -152,6 +152,34 @@ questions:
     assert [question.id for question in form.questions] == ["good"]
 
 
+def test_file_field_accept_and_max_size_are_validated_in_config(tmp_path: Path) -> None:
+    write_form(
+        tmp_path / "one",
+        """\
+title: One
+questions:
+  - {id: default_file, field: file, question: Default file}
+  - id: typed_file
+    field: file
+    question: Typed file
+    accept: [audio/*, image/*, text/html, .csv]
+    max_size: 500KB
+  - {id: bad_accept_type, field: file, question: Bad, accept: 12}
+  - {id: bad_accept_token, field: file, question: Bad, accept: "html"}
+  - {id: bad_size, field: file, question: Bad, max_size: many}
+  - {id: too_big, field: file, question: Bad, max_size: 6MB}
+""",
+    )
+
+    form = FormRegistry(tmp_path).get("one")
+
+    assert [question.id for question in form.questions] == ["default_file", "typed_file"]
+    assert form.question("default_file").accept == ()
+    assert form.question("default_file").max_size == 1024 * 1024
+    assert form.question("typed_file").accept == ("audio/*", "image/*", "text/html", ".csv")
+    assert form.question("typed_file").max_size == 500 * 1024
+
+
 def test_version_changes_for_text_edit_but_not_yaml_comments(tmp_path: Path) -> None:
     path = tmp_path / "one"
     original = "title: One\nquestions:\n- {id: q1, field: text, question: First}\n"

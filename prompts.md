@@ -1,5 +1,86 @@
 # Prompts
 
+## File uploads, 28 Jun 2026
+
+<!--
+cd ~/code/liveform/
+dev.sh -- codex --yolo --model gpt-5.5 --config model_reasoning_effort=medium
+-->
+<!-- SPEC: https://chatgpt.com/c/6a40f277-94d0-83ec-a517-a80bd0e895ea -->
+
+Extend Liveform with a new `field: file`.
+
+YAML:
+
+- `field: file`
+- optional `accept`: string or list of strings, using HTML file accept syntax like `audio/*`, `image/*`, `text/html`, `.html`, `.csv`
+- optional `max_size`: human-readable size string like `500KB`, `1MB`, `5MB`; default `1MB`
+
+Browser:
+
+- render `<input type="file" name="answer" required>`
+- set `accept` when configured
+- show allowed types and max size
+- validate max size before upload
+- submit file questions as `multipart/form-data`; keep existing JSON flow for other fields
+- show submitted upload as the saved relative path
+
+Server:
+
+- add `file` to supported fields
+- validate `accept` and `max_size` in config
+- accept multipart submissions on `POST /{slug}/answers`
+- authenticate exactly like existing answers
+- enforce one upload per normalized email + question using existing `ResponseStore` semantics
+- save files under `<form>/uploads/<question-id>--<email-slug>--<sha256-12>.<ext>`
+- infer extension from content type / allowed mapping, falling back to safe original extension
+- write the relative path, e.g. `uploads/q--email--hash.ext`, as the TSV answer
+- add `uploads/` to `.gitignore`
+- do not publicly serve uploaded files
+
+Write failing tests first for config parsing, rendering, upload success, type rejection, size rejection, duplicate rejection, and path sanitization. Then implement. Run and test.
+
+---
+
+Is this is smallest, most elegant implementation that works?
+Sometimes, new features are an opportunity to refactor and simplify existing code.
+What are the best opportunities to refactor and simplify existing code while adding this new feature?
+List the refactoring opportunities, prioritized by impact and risk, and share them in a way that's easy for me to review.
+Then await my inputs.
+
+---
+
+<!--
+  1. Cap max_size explicitly in config
+     Impact: High. Risk: Low.
+     Right now src/liveform/config.py:320 accepts any MB value, while src/liveform/server.py:28 has a hard 10 MiB request cap. A form could advertise max_size: 50MB, but uploads would fail at the request
+     layer. Add a clear MAX_FILE_BYTES = 5 * 1024 * 1024 or similar and reject larger config values.
+
+  2. Remove duplicated client submit success logic
+     Impact: Medium. Risk: Low.
+     src/liveform/assets.py:480 has a file branch that repeats the same “delete draft, update state, render” code as the JSON path. Add a tiny applySubmitResult(question, result) helper. This is the easiest
+     elegance win.
+
+  3. Move upload helpers into a small module
+     Impact: Medium. Risk: Medium-low.
+     src/liveform/server.py:374 now owns MIME mapping, accept matching, extension sanitation, email slugging, and file saving. A uploads.py module would make this easier to test directly and keep server.py
+     focused on routing/auth/response flow.
+
+  4. Avoid writing files before duplicate check
+     Impact: Medium. Risk: Medium.
+     The current flow saves the upload, then calls ResponseStore.submit(), then deletes the just-written file on duplicate. It works, but a crash between save and submit can leave an orphan. A cleaner model
+     would add a ResponseStore.has_answer(email, question) or reservation-style method before writing. This touches storage semantics, so I would only do it if orphan cleanup matters.
+
+  5. Use a normalized submission object
+     Impact: Low-medium. Risk: Low.
+     src/liveform/server.py:308 returns AnswerRequest plus optional UploadFile. A small dataclass like ParsedSubmission(question_id, answer, upload) would reduce the awkward answer=None placeholder for
+     multipart.
+-->
+
+Implement 1, 2 and 3.
+
+<!-- codex resume 019f0dc2-4739-7b63-822b-25971c2be777 -->
+
 ## Efficiency, 16 Jun 2026
 
 <!--
@@ -131,12 +212,12 @@ No admin page required.
 Sample file structure:
 
 ./
-  tds-workshop/
-    form.yaml
-    responses.tsv
-  ai-exam/
-    form.yaml
-    responses.tsv
+tds-workshop/
+form.yaml
+responses.tsv
+ai-exam/
+form.yaml
+responses.tsv
 
 ... exposed as https://forms.s-anand.net/tds-workshop/ and https://forms.s-anand.net/ai-exam/
 

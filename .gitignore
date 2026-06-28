@@ -10,5 +10,6 @@ dist/
 client_secret*.json
 credentials*.json
 responses.tsv
+uploads/
 .liveform-types.json
 .liveform-session-secret

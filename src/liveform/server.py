@@ -14,14 +14,17 @@ from typing import Any
 import segno
 from fastapi import FastAPI, Header, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, PlainTextResponse
+from pydantic import ValidationError
 from pydantic import BaseModel
+from starlette.datastructures import UploadFile
 
 from liveform.assets import CSS, HOME_CSS, HOME_PAGE, JS, PAGE
 from liveform.auth import GoogleTokenVerifier, SessionTokenSigner, is_authorized, normalize_identity
 from liveform.config import ConfigError, Form, FormRegistry, Question
 from liveform.store import ResponseStore
+from liveform.uploads import save_upload
 
-MAX_REQUEST_BYTES = 1_000_000
+MAX_REQUEST_BYTES = 10 * 1024 * 1024
 MAX_TEXT_ANSWER_LENGTH = 100_000
 SESSION_SECRET_FILE = ".liveform-session-secret"
 
@@ -227,22 +230,33 @@ def create_app(
         )
 
     @app.post("/{slug}/answers", status_code=201)
-    def submit(
+    async def submit(
         slug: str,
-        submission: AnswerRequest,
         request: Request,
         authorization: str | None = Header(None),
     ) -> Response:
         form = get_form(slug)
         identity = authenticate(form, authorization)
+        submission, upload = await parse_submission(request)
         question = form.question(submission.question)
         if not question:
             raise HTTPException(404, "Question not found or not available")
-        answer = validate_answer(question, submission.answer)
+        upload_existed = False
+        if question.field == "file":
+            if not upload:
+                raise HTTPException(422, "File answer is required")
+            answer, upload_existed = await save_upload(
+                root / slug, question, identity["email"], upload
+            )
+        elif upload:
+            raise HTTPException(422, "This question does not accept file uploads")
+        else:
+            answer = validate_answer(question, submission.answer)
         ip = request.headers.get("CF-Connecting-IP") or (
             request.client.host if request.client else ""
         )
         response_store = store(slug)
+        saved_path = root / slug / answer if question.field == "file" else None
         created = response_store.submit(
             identity,
             question.id,
@@ -251,6 +265,8 @@ def create_app(
             request.headers.get("User-Agent", ""),
         )
         if not created:
+            if saved_path and not upload_existed:
+                saved_path.unlink(missing_ok=True)
             raise HTTPException(409, "This question has already been submitted")
         counts = response_store.answer_counts()
         return Response(
@@ -269,6 +285,24 @@ def create_app(
         )
 
     return app
+
+
+async def parse_submission(request: Request) -> tuple[AnswerRequest, UploadFile | None]:
+    """Read JSON or multipart answer requests."""
+    content_type = request.headers.get("content-type", "")
+    if content_type.split(";", 1)[0].strip().lower() == "multipart/form-data":
+        form = await request.form()
+        question = form.get("question")
+        upload = form.get("answer")
+        if not isinstance(question, str):
+            raise HTTPException(422, "Question is required")
+        if upload is not None and not isinstance(upload, UploadFile):
+            raise HTTPException(422, "File answer is required")
+        return AnswerRequest(question=question, answer=None), upload
+    try:
+        return AnswerRequest.model_validate(await request.json()), None
+    except (json.JSONDecodeError, ValidationError) as error:
+        raise HTTPException(422, "Invalid answer payload") from error
 
 
 def session_secret(root: Path) -> bytes:
@@ -317,3 +351,4 @@ def validate_answer(question: Question, value: Any) -> str:
     ):
         raise HTTPException(422, "Answer must be a non-empty list of unique configured choices")
     return json.dumps(value, separators=(",", ":"))
+

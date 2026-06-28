@@ -194,11 +194,12 @@ figcaption { padding-top: .25rem; color: #52606b; font-size: .72rem; }
 label.choice { display: flex; gap: .65rem; align-items: flex-start; padding: .55rem 0; }
 input[type="radio"], input[type="checkbox"] { width: 1.15rem; height: 1.15rem; margin-top: .2rem; accent-color: var(--accent); }
 input[type="text"], input[type="url"], input[type="email"], input[type="tel"], input[type="number"],
-input[type="date"], input[type="time"], input[type="datetime-local"], textarea {
+input[type="date"], input[type="time"], input[type="datetime-local"], input[type="file"], textarea {
   width: 100%; margin-top: .8rem; padding: .75rem; border: 1px solid var(--line); border-radius: .55rem;
   background: var(--paper); color: inherit; font: inherit;
 }
 textarea { min-height: 7rem; resize: vertical; }
+.file-hint { margin: .45rem 0 0; color: var(--muted); font-size: .84rem; }
 button {
   margin-top: 1rem; padding: .65rem 1rem; border: 0; border-radius: .55rem; background: var(--accent);
   color: #fff; font: inherit; font-weight: 700; cursor: pointer;
@@ -329,6 +330,8 @@ const addConstraint = (element, question, name) => {
   if (question[name] !== undefined) element.setAttribute(name, question[name]);
 };
 
+const formatBytes = (bytes) => bytes >= 1024 * 1024 ? `${Math.round(bytes / 1024 / 1024 * 10) / 10}MB` : `${Math.round(bytes / 1024 * 10) / 10}KB`;
+
 const buildField = (question) => {
   if (question.field === "text" || question.field === "textarea") {
     const element = document.createElement(question.field === "textarea" ? "textarea" : "input");
@@ -337,6 +340,19 @@ const buildField = (question) => {
     if (question.field === "text") element.type = question.type ?? "text";
     for (const name of ["minlength", "maxlength", "pattern"]) addConstraint(element, question, name);
     return element;
+  }
+  if (question.field === "file") {
+    const fragment = document.createDocumentFragment();
+    const element = document.createElement("input");
+    element.type = "file";
+    element.name = "answer";
+    element.required = true;
+    if (question.accept?.length) element.accept = question.accept.join(",");
+    const hint = document.createElement("p");
+    hint.className = "file-hint";
+    hint.textContent = `Allowed: ${question.accept?.length ? question.accept.join(", ") : "any file"} · Max ${formatBytes(question.max_size)}`;
+    fragment.append(element, hint);
+    return fragment;
   }
   const fragment = document.createDocumentFragment();
   for (const choice of question.choices) {
@@ -379,12 +395,14 @@ const updateCounts = () => {
 };
 
 const rememberDraft = (question, form) => {
+  if (question.field === "file") return;
   const data = new FormData(form);
   drafts.set(question.id, question.field === "multi_choice" ? data.getAll("answer") : data.get("answer"));
   saveDrafts();
 };
 
 const restoreDraft = (question, form) => {
+  if (question.field === "file") return;
   if (!drafts.has(question.id)) return;
   const draft = drafts.get(question.id);
   for (const input of form.querySelectorAll("[name=answer]")) {
@@ -453,20 +471,39 @@ const render = (scroll = false) => {
   if (scroll) questions.querySelector(".question:not(.answered)")?.scrollIntoView({ behavior: "smooth", block: "center" });
 };
 
+const applySubmitResult = (question, result) => {
+  drafts.delete(question.id);
+  saveDrafts();
+  state.answers[question.id] = result.answer;
+  state.answer_counts = result.answer_counts;
+  render(false);
+};
+
 const submit = async (event, question, button, error) => {
   event.preventDefault();
   button.disabled = true;
   error.textContent = "";
   try {
     const data = new FormData(event.currentTarget);
+    if (question.field === "file") {
+      if (data.get("answer")?.size > question.max_size) throw new Error(`File must be at most ${formatBytes(question.max_size)}.`);
+      const fileData = new FormData();
+      fileData.set("question", question.id);
+      fileData.set("answer", data.get("answer"));
+      const response = await fetch(`${base}/answers`, { method: "POST", body: fileData, headers: { Authorization: `Bearer ${token}` } });
+      const result = await response.json();
+      if (!response.ok) {
+        const uploadError = new Error(result?.detail ?? "Request failed");
+        uploadError.status = response.status;
+        throw uploadError;
+      }
+      applySubmitResult(question, result);
+      return;
+    }
     const answer = question.field === "multi_choice" ? data.getAll("answer") : data.get("answer");
     if (question.field === "multi_choice" && !answer.length) throw new Error("Select at least one choice.");
     const result = await api("/answers", { method: "POST", body: JSON.stringify({ question: question.id, answer }) });
-    drafts.delete(question.id);
-    saveDrafts();
-    state.answers[question.id] = result.answer;
-    state.answer_counts = result.answer_counts;
-    render(false);
+    applySubmitResult(question, result);
   } catch (cause) {
     if (cause.status === 409) {
       await loadState(false);
