@@ -1,0 +1,23 @@
+title: "AI Unboxed 2 - Tools and Workflows"
+description: What AI tools are helpful and how to integrate them into our work
+
+questions:
+
+  - id: ai_use_cases
+    question: What was your best use of AI this month?
+
+  - id: saw_summary
+    question: "Did you read [last talk's summary](https://sanand0.github.io/talks/2026-05-23-ai-unboxed-context-engineering/)?"
+    choices: ["Yes", "No"]
+
+  - id: voice_transcript
+    question: At what link can we see your shared Google AI studio voice transcription?
+
+  - id: hallucinations
+    question: "Hallucinations are actually not very different from people lying or making mistakes. Sometimes we don't know enough about what they've done or enough about their fields of expertise to know and judge. How have you seen this sort of situation being dealt with effectively in the past? In other words, how do you verify humans and what are the most effective methods?"
+
+  - id: verification_skill
+    question: Please share the PUBLIC link to your verification skill
+
+  - id: useful_schedules
+    question: What are useful schedule you might run? Things that, if you received day or weekly from an assistant or expert, would help you a lot?
